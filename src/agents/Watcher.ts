@@ -1,42 +1,58 @@
 import { Page } from "playwright";
 import { logger } from "../services/Logger";
 import { config } from "../config/config";
+import { injectObserver } from "../controllers/injectObserver";
 
 export async function watchTimer(page: Page) {
 
-  logger.info("Monitoring timesheet...")
+  logger.info("Injecting DOM observer...");
 
-  while (true) {
+  let restarting = false;
+  const timerButtonSelector = config.selectors.timerButton;
+  const checkboxSelector = config.selectors.checkbox;
+  const playIconSelector = config.selectors.playIcon;
+
+  await page.exposeFunction("timerStopped", async () => {
+
+    if (restarting) return;
+    restarting = true;
 
     try {
 
-      logger.info("Waiting for timer to stop...")
-      await page.waitForFunction(() => {
+      logger.info("Timer stopped → restarting");
 
-        const btn = document.querySelector(config.selectors.timerButton);
-
-        return btn?.querySelector("path");
-
-      })
-      logger.warn("Timer stopped → starting process")
-      const checkbox = page.locator(config.selectors.checkbox).first();
+      const checkbox = page.locator(checkboxSelector).first();
       await checkbox.click();
-
-      logger.warn("Daily Task checked");
-
-      const button = page.locator(config.selectors.timerButton);
+      const button = page.locator(timerButtonSelector);
       await button.click();
-      logger.info("Timer started")
-      await page.waitForTimeout(2000);
+
+      logger.info("Timer started");
 
     } catch (err) {
-      logger.info("Still running...")
-      return;
-
+      logger.error(err, "Failed to restart timer");
+    } finally {
+      setTimeout(() => {
+        restarting = false;
+      }, 3000);
     }
 
-    await page.waitForTimeout(5000);
+  });
 
-  }
+  await injectObserver(page, timerButtonSelector, playIconSelector);
+  logger.info("Watcher Running");
+  page.on("framenavigated", async (frame) => {
+
+    if (frame !== page.mainFrame()) return;
+
+    logger.info("Page navigation detected → reinjecting observer");
+
+    try {
+      await page.waitForLoadState("domcontentloaded");
+      await injectObserver(page, timerButtonSelector, playIconSelector);
+
+    } catch (err) {
+      logger.warn("Observer injection skipped during navigation");
+    }
+  });
 
 }
