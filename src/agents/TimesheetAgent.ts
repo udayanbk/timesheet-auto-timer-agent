@@ -15,11 +15,9 @@ export async function runTimesheetAgent() {
 
       const page = await launchBrowser();
 
-      page.on("close", () => {
-        logger.warn("Timesheet tab closed");
-      });
-
       await watchTimer(page);
+
+      await page.waitForEvent("close");
 
     } catch (err) {
 
