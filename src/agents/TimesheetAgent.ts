@@ -15,9 +15,8 @@ export async function runTimesheetAgent() {
 
       const page = await launchBrowser();
 
+      // watcher will exit when page closes or watchdog throws
       await watchTimer(page);
-
-      await page.waitForEvent("close");
 
     } catch (err) {
 
@@ -28,4 +27,5 @@ export async function runTimesheetAgent() {
     await wait(5000);
 
   }
+
 }
