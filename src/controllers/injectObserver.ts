@@ -9,8 +9,6 @@ export async function injectObserver(
   await page.evaluate(
     ({ timerButtonSelector, playIconSelector }) => {
 
-      let timerRunning = true;
-
       const checkTimer = () => {
 
         const btn = document.querySelector(timerButtonSelector);
@@ -18,34 +16,22 @@ export async function injectObserver(
 
         const playIcon = btn.querySelector(playIconSelector);
 
-        if (playIcon && timerRunning) {
-
-          timerRunning = false;
-
-          // @ts-ignore
-          window.timerStopped();
-
-          setTimeout(() => {
-            timerRunning = true;
-          }, 3000);
-
+        if (playIcon) {
+          console.debug("Timer stopped detected in DOM");
         }
 
       };
 
-      const btn = document.querySelector(timerButtonSelector);
-      if (!btn) return;
+      checkTimer();
 
       const observer = new MutationObserver(() => {
         checkTimer();
       });
 
-      observer.observe(btn, {
+      observer.observe(document.body, {
         childList: true,
         subtree: true
       });
-
-      checkTimer();
 
     },
     { timerButtonSelector, playIconSelector }
